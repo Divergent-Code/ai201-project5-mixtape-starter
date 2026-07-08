@@ -106,3 +106,9 @@ So the path is: **request → routes → service (`rate_song`) → `Rating` mode
 - **My fix:** I changed `songs[:-1]` to `songs`, so the function returns every song the query found instead of all-but-the-last. The correct query result was already in hand; the bug was purely in how the list was sliced before returning.
 
 - **Side-effect check:** I ran the full `pytest tests/` suite — all 13 tests now pass, including `test_playlist_returns_all_songs` (correct count of 5) and `test_playlist_returns_songs_in_order` (correct order Track 1–5). This confirms both that the last song is restored and that the ordering by `position` is unaffected. Nothing else in the file references this slice, so the change is contained to `get_playlist_songs`.
+
+## Regression Test
+
+I added `tests/test_notifications.py` as a regression test for **Issue #4** (no notification when a song is rated). The main test, `test_rating_a_song_notifies_the_sharer`, creates two users and a song shared by the first user, has the second user rate that song, and asserts that the sharer then has exactly one `song_rated` notification.
+
+This test would have caught the bug before it was fixed: the original `rate_song` saved the `Rating` but never called `create_notification`, so the sharer would have had **zero** notifications and the assertion `len(notifications) == 1` would have failed. A second test, `test_rating_your_own_song_does_not_notify`, verifies the guard that prevents a user from being notified about rating their own song. I chose Issue #4 for the regression test because it had no existing test coverage and its behavior is deterministic (unlike Issue #3, whose duplicate is hidden by the installed SQLAlchemy version, a "no duplicates" assertion would have passed even against the buggy code).
