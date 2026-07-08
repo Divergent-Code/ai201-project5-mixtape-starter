@@ -47,3 +47,15 @@ So the path is: **request → routes → service (`rate_song`) → `Rating` mode
 - **My fix:** I removed the `and today.weekday() != 6` condition, so branch (2) now reads `elif days_since_last == 1:`. A streak now increments any time the user listened on the previous day, regardless of which day of the week it is.
 
 - **Side-effect check:** I ran the full `pytest tests/test_streaks.py`. All 5 tests pass, including the ones covering normal weekday increments and skipped-day resets. This confirms the fix restores Sunday behavior without changing how streaks work on other days or how they reset when a day is skipped.
+
+### Issue #2 — Friends Listening Now shows people from yesterday (`feed_service.py`)
+
+- **How I reproduced it:** There is no existing test for the feed, so I wrote a small throwaway script that seeds fresh data and calls `get_friends_listening_now` for two users. It showed that "kenji" saw his friend "nova" in the Listening Now feed even though nova's most recent listen was ~120 minutes ago — clearly not "now." Meanwhile the friends who listened 10–20 minutes ago also showed up. So the feed was including listens from far too long ago.
+
+- **How I found the root cause (navigation path):** I opened `feed_service.py` (the service that owns the feed) and looked at `get_friends_listening_now`. It builds a `cutoff` time from a constant near the top of the file: `RECENT_THRESHOLD = timedelta(hours=24)`, then keeps every listening event newer than that cutoff. I also read the comments in `seed_data.py`, which said recent events "within the past 30 minutes" should appear and older ones "should NOT appear in 'listening now' after fix." That mismatch — 24 hours in the code vs. 30 minutes intended — told me the threshold value was the problem.
+
+- **The root cause:** `RECENT_THRESHOLD` was set to 24 hours. The feed is meant to show who is listening *right now*, but a 24-hour window counts anyone who listened at any point in the last full day — including yesterday. So the cutoff was far too generous, which is exactly why stale listens (like nova's from 2 hours ago) were treated as "listening now."
+
+- **My fix:** I changed `RECENT_THRESHOLD` from `timedelta(hours=24)` to `timedelta(minutes=30)`, matching the intended "now" window described in the seed data comments. The recency filter logic itself was correct; only the window size was wrong.
+
+- **Side-effect check:** I re-ran my script and confirmed both sides of the boundary: friends who listened 17–27 minutes ago still appear, while the 2-hour-old listen no longer does. I also checked the other function in the same file, `get_activity_feed`, and confirmed it does not use `RECENT_THRESHOLD` at all (it is intentionally not recency-filtered), so my change cannot affect it. Finally I ran the full test suite — the streak and search tests still pass; the only failures are the two pre-existing playlist tests for Issue #5, which are unrelated to this change.
