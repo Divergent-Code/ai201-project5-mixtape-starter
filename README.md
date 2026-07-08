@@ -1,5 +1,12 @@
 # Mixtape
 
+![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=sqlalchemy&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-9.1-0A9EDC?logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen)
+![Bugs Fixed](https://img.shields.io/badge/bugs%20fixed-5%2F5-success)
+
 A social music app where friends share songs, build collaborative playlists, and track listening stats.
 
 This is the starter repo for **Project 5: Mixtape Bug Hunt**. The app has five open issues in its tracker. Your job is to find, fix, and document at least three of them.
