@@ -1,7 +1,18 @@
 # Mixtape Bug Hunt — Submission
 
 ## AI Usage
-<!-- We'll write this last. -->
+
+As a neurodivergent and disabled student (ADHD, autism, and dyscalculia), I used Claude Code (Anthropic's CLI, running Claude Opus) as a cognitive prosthetic — support for working memory, attention, and breaking an overwhelming task into small, ordered steps I could actually follow. Within that framing, I used it mainly as a guide for navigating and debugging an unfamiliar codebase: I made the diagnostic decisions and verified the results myself, while the AI explained code, kept track of where we were, wrote small test scripts, and drafted documentation for me to review.
+
+- **Orientation:** I asked Claude to explain how the codebase is organized and to trace one feature end to end (rating a song, from the route to the service to the model). It explained the routes → services → models structure, which I used to write my own codebase map. This also helped me predict where each bug would live — e.g., I knew the streak bug would be in `streak_service.py` because each service owns one area of logic.
+
+- **Guided investigation:** For each bug, Claude walked me through the suspect function with step-by-step questions instead of just handing me the answer, and I identified the actual cause. For Issue #1 I spotted that the `weekday() != 6` condition was blocking the streak on Sundays; for Issue #3 I recognized the `outerjoin` to the tags table was unnecessary and only created duplicates; for Issue #5 I found the `[:-1]` slice that dropped the last song. Claude also wrote small throwaway reproduction scripts (for the feed, search, and notification bugs) that I ran to watch each bug happen before fixing it.
+
+- **A moment where the AI's first result was incomplete and I had to dig deeper:** When I first tried to reproduce Issue #3, my search script showed the song only once — the duplicate did not appear as the issue described. Instead of assuming there was no bug, we ran a diagnostic script and found the installed SQLAlchemy version (2.0.51) was automatically de-duplicating results and masking the bug, even though the underlying query really did return 3 duplicate rows. Confirming this changed how I documented the issue: I described the duplicate as real at the query level but hidden by this library version, rather than claiming it didn't exist.
+
+- **Verification:** I did not take fixes on trust. After each change I ran `pytest tests/` and the reproduction scripts to confirm the bug was gone and nothing else broke — for example, checking that ordinary weekday streaks still worked after the Sunday fix, and that all 13 tests passed after the final playlist fix.
+
+- **Documentation:** Claude drafted the root-cause analysis write-ups based on the reasoning we worked through together, and I reviewed each entry against what I had actually found before committing it.
 
 ## Codebase Map
 
