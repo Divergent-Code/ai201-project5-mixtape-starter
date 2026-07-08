@@ -35,4 +35,15 @@ When someone uses the app, their request goes to the **routes** first, which han
 So the path is: **request → routes → service (`rate_song`) → `Rating` model.**
 
 ## Root Cause Analysis
-<!-- One entry per bug. We'll fill these in later. -->
+
+### Issue #1 — My listening streak keeps resetting (`streak_service.py`)
+
+- **How I reproduced it:** I ran the existing test `pytest tests/test_streaks.py::test_streak_increments_on_sunday`. It failed with `assert 1 == 2`. The test simulates a user listening on Saturday (streak becomes 1) and then Sunday (streak should become 2), but the streak stayed at 1 — confirming that listening on a Sunday does not add to the streak.
+
+- **How I found the root cause (navigation path):** I knew the streak bug had to live in `streak_service.py`, because each service file owns one area of logic. I opened it and found the function `update_listening_streak`. Its decision block has three branches: (1) listened today → do nothing, (2) listened yesterday → add to streak, (3) otherwise → reset to 1. I noticed branch (2) had an extra condition the others didn't: `and today.weekday() != 6`.
+
+- **The root cause:** In Python, `weekday()` returns 6 for Sunday. So branch (2) — the "add to streak" branch — only runs when today is *not* Sunday. On a Sunday, a user who listened yesterday should still get their streak incremented, but the extra `!= 6` condition blocks branch (2), so execution falls through to branch (3), which resets the streak to 1. That is why the streak "kept resetting" — specifically only when the second listening day landed on a Sunday.
+
+- **My fix:** I removed the `and today.weekday() != 6` condition, so branch (2) now reads `elif days_since_last == 1:`. A streak now increments any time the user listened on the previous day, regardless of which day of the week it is.
+
+- **Side-effect check:** I ran the full `pytest tests/test_streaks.py`. All 5 tests pass, including the ones covering normal weekday increments and skipped-day resets. This confirms the fix restores Sunday behavior without changing how streaks work on other days or how they reset when a day is skipped.
